@@ -15,7 +15,7 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 # === БАЗА СЦЕНАРИЕВ С ФОТО И HTML-РАЗМЕТКОЙ ===
 SCENARIOS = {
     "menu": {
-        "text": "Привет, Управляющий! 🦅\nВыбери ситуацию для отработки:",
+        "text": "Привет, Управляющий! 🦅\nВыбери ситуацию для тренировки:",
         "photo": "https://drive.google.com/file/d/1YC0O2inG1TMIadAw1aLWyd2-8Z89YQ5s/view?usp=sharing"
         "buttons": [
             {"text": "🍕 Кейс 1: Бунт из-за ревизий", "callback": "c1_start"},
