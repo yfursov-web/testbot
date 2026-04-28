@@ -3,6 +3,8 @@ import telebot
 from telebot import types
 from openai import OpenAI
 from dotenv import load_dotenv
+from flask import Flask
+from threading import Thread
 
 # Загрузка переменных окружения из файла .env
 load_dotenv()
@@ -155,6 +157,21 @@ def handle_conversation(message):
         bot.send_message(chat_id, f"Сотрудник ушел в себя (ошибка API): {e}")
 
 # Запуск бота
+# === МИКРО-СЕРВЕР ДЛЯ ХОСТИНГА ===
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Тренажер Додо Пиццы работает!"
+
+def run_server():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
 if __name__ == "__main__":
+    print("Запуск веб-сервера...")
+    server_thread = Thread(target=run_server)
+    server_thread.start()
+    
     print("Бот-тренажер для Управляющих запущен...")
     bot.polling(none_stop=True)
