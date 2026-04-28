@@ -1,168 +1,111 @@
 import os
 import telebot
 from telebot import types
-from openai import OpenAI
-from dotenv import load_dotenv
 from flask import Flask
 from threading import Thread
 
-# Загрузка переменных окружения из файла .env
-load_dotenv()
+# Получаем токен из переменных окружения (Render)
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not TELEGRAM_TOKEN:
+    raise ValueError("Не найден TELEGRAM_TOKEN. Укажи его в настройках Render.")
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Словарь для хранения сессий пользователей (контекст диалога)
-user_sessions = {}
-
-# === БАЗА СЦЕНАРИЕВ ===
+# === БАЗА СЦЕНАРИЕВ (ТЕКСТОВЫЙ КВЕСТ) ===
+# Здесь мы прописываем узлы диалога. 'text' - то, что пишет бот. 'buttons' - варианты для пользователя.
 SCENARIOS = {
-    "case_1": {
-        "title": "🍕 Кейс 1: Настя против Андрея (Межличностный)",
-        "description": "Менеджер Настя жалуется, что Андрей плохо передает смену и оставляет грязь. Твоя задача — выступить 3-й стороной и решить конфликт.",
-        "system_prompt": """Ты — менеджер Андрей в Додо Пицце. Настя постоянно придирается к тебе из-за чистоты при передаче смены. 
-        Ты считаешь, что делаешь всё нормально, а у неё завышенные требования. 
-        Ты раздражен. Твоя стартовая позиция: 'Я всё делаю по чеклисту, мне некогда за каждым пятном бегать'.
-        Отвечай Управляющему (пользователю) коротко, эмоционально. Не сдавайся сразу, проверь Управляющего на эмпатию и умение договариваться."""
+    "menu": {
+        "text": "Привет, Управляющий! 🦅\nВыбери ситуацию для отработки:",
+        "buttons": [
+            {"text": "🍕 Кейс 1: Бунт из-за ревизий", "callback": "c1_start"},
+            {"text": "🧹 Кейс 2: Грязный бакаут", "callback": "c2_start"}
+        ]
     },
-    "case_2": {
-        "title": "⚡️ Кейс 2: Бунт из-за ревизий",
-        "description": "Ты ввел ежедневные ревизии. Опытный менеджер злится, что из-за этого не успевает делать другие задачи.",
-        "system_prompt": """Ты — опытный менеджер смены в Додо Пицце. Управляющий (пользователь) ввел новые ежедневные ревизии.
-        Ты злишься, потому что это отнимает время от других задач на смене (линия, заказы).
-        Твоя позиция: 'Либо я считаю остатки, либо я слежу за линией. Я не робот!'
-        Отвечай Управляющему дерзко, но в рамках корпоративной этики. Уступи только если Управляющий применит метод 'соперничества' (твердость ради результата) или предложит логичный компромисс."""
+    
+    # -------- КЕЙС 1: БУНТ ИЗ-ЗА РЕВИЗИЙ --------
+    "c1_start": {
+        "text": "*Ситуация:*\nТы ввел ежедневные ревизии по продуктам с топ-потерями. Менеджеры недовольны.\n\n*Опытный менеджер:* «Эти ваши новые ревизии — просто трата времени! Мы не успеваем! Либо я считаю остатки, либо слежу за линией!»\n\n*Выбери свою реакцию:*",
+        "buttons": [
+            {"text": "«Ревизии обязательны. Планируй время.»", "callback": "c1_sop"},
+            {"text": "«Давай вместе найдем, где сэкономить время.»", "callback": "c1_sotr"},
+            {"text": "«Делай ревизию, но только если нет очереди.»", "callback": "c1_komp"},
+            {"text": "«Ладно, пока отменяем ревизии.»", "callback": "c1_ust"}
+        ]
     },
-    "case_3": {
-        "title": "🌴 Кейс 3: Внеплановый отпуск",
-        "description": "Отличный менеджер требует внеплановый отпуск, угрожая увольнением. Графики уже утверждены.",
-        "system_prompt": """Ты — один из лучших менеджеров пиццерии. Тебе срочно нужен внеплановый отпуск по личным обстоятельствам.
-        Управляющий (пользователь) отказывает, так как графики согласованы.
-        Твоя позиция: 'Я всё понимаю про график, но мне правда нужно уехать. Если не договоримся — пишите заявление по собственному'.
-        Твоя цель: получить отпуск. Ты готов уйти, если Управляющий выберет 'достижение цели' (отказ), а не 'сохранение отношений' (уступка)."""
+    "c1_sop": {
+        "text": "*Менеджер:* «Понятно... Ну ок, будем разрываться, раз вам так нужны эти цифры.»\n\n📊 **Твой результат: 7/10**\nТы выбрал метод **Соперничество**. В этой ситуации, когда важны показатели пиццерии (слайд 48), это допустимый метод. Цель достигнута, ревизии будут делаться, но отношения с сотрудником пострадали.",
+        "buttons": [{"text": "⬅️ Вернуться в меню", "callback": "menu"}]
+    },
+    "c1_sotr": {
+        "text": "*Менеджер:* «Ну давайте посмотрим... Может, если выводить стажера пораньше, я успею посчитать сыр.»\n\n📊 **Твой результат: 10/10**\nТы выбрал метод **Сотрудничество**. Это идеальный подход: ты сохранил авторитет (ревизии остаются) и помог сотруднику решить проблему с нехваткой времени. Ценности Додо соблюдены!",
+        "buttons": [{"text": "⬅️ Вернуться в меню", "callback": "menu"}]
+    },
+    "c1_komp": {
+        "text": "*Менеджер:* «Хорошо, если будет запар — считать не буду.»\n\n📊 **Твой результат: 6/10**\nТы выбрал метод **Компромисс**. Проблема решена наполовину. Риск в том, что сотрудник теперь сам решает, когда соблюдать стандарты, а когда нет. Показатели пиццерии могут пострадать.",
+        "buttons": [{"text": "⬅️ Вернуться в меню", "callback": "menu"}]
+    },
+    "c1_ust": {
+        "text": "*Менеджер:* «Вот и отлично, давно бы так.»\n\n📊 **Твой результат: 2/10**\nТы выбрал метод **Уступка**. Ты сохранил отношения с менеджером, но пожертвовал важным стандартом. Потерял авторитет, и теперь недостачи будут расти.",
+        "buttons": [{"text": "⬅️ Вернуться в меню", "callback": "menu"}]
+    },
+
+    # -------- КЕЙС 2: ГРЯЗНЫЙ БАКАУТ (Пример для расширения) --------
+    "c2_start": {
+        "text": "*Ситуация:*\nКонец смены. Курьер отказывается мыть полы в зоне отдыха (бакаут), хотя это его обязанность по чек-листу закрытия.\n\n*Курьер:* «Я отвез 40 заказов! Я ног не чувствую. Пусть стажеры моют, я поехал домой.»\n\n*Выбери свою реакцию:*",
+        "buttons": [
+            {"text": "«Не вымоешь — не закрою смену.»", "callback": "c2_sop"},
+            {"text": "«Давай я помогу тебе, вымоем вместе.»", "callback": "c2_sotr"},
+            {"text": "«Иди домой, я сам вымою.»", "callback": "c2_ust"}
+        ]
+    },
+    "c2_sop": {
+        "text": "*Курьер:* (Молча, со злостью берет швабру).\n\n📊 **Твой результат: 8/10 (Соперничество).**\nСправедливость восстановлена, чек-лист выполнен. Но нужно будет позже поговорить с ним тет-а-тет об усталости.",
+        "buttons": [{"text": "⬅️ Вернуться в меню", "callback": "menu"}]
+    },
+    "c2_sotr": {
+        "text": "*Курьер:* «Ладно, шеф. Если вместе, то давайте быстро добьем это дело.»\n\n📊 **Твой результат: 10/10 (Сотрудничество).**\nПравило 'Единой команды' в действии. Ты показал лидерство на личном примере.",
+        "buttons": [{"text": "⬅️ Вернуться в меню", "callback": "menu"}]
+    },
+    "c2_ust": {
+        "text": "*Курьер:* «Спасибо, до завтра!»\n\n📊 **Твой результат: 3/10 (Уступка).**\nТы избежал конфликта, но создал прецедент. Завтра все курьеры откажутся мыть полы, ссылаясь на усталость.",
+        "buttons": [{"text": "⬅️ Вернуться в меню", "callback": "menu"}]
     }
 }
 
-# Промпт для оценки (Асессор)
-ASSESSOR_PROMPT = """Ты — эксперт-тренажер 'Додо Пицца'. Твоя задача — оценить диалог между Управляющим (User) и сотрудником (Assistant) по решению конфликта.
-Оцени действия Управляющего по 10-балльной шкале, учитывая:
-1. Эмпатия (услышал ли эмоции и факты).
-2. Выбор метода (соперничество, сотрудничество, компромисс, уступка, избегание). Правильно ли выбран метод для конкретной ситуации?
-3. Сохранение авторитета и стандартов компании.
-Выдай структурированный и краткий фидбек: что получилось хорошо, а что стоит улучшить."""
-
-# === ЛОГИКА БОТА ===
+# === ОБРАБОТЧИКИ ТЕЛЕГРАМ ===
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
+    send_node(message.chat.id, "menu")
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_query(call):
+    # Убираем "часики" загрузки на кнопке
+    bot.answer_callback_query(call.id)
+    # Отправляем нужный узел сценария
+    send_node(call.message.chat.id, call.data)
+
+def send_node(chat_id, node_id):
+    if node_id not in SCENARIOS:
+        return
+        
+    node = SCENARIOS[node_id]
+    text = node["text"]
+    
     markup = types.InlineKeyboardMarkup(row_width=1)
-    btn1 = types.InlineKeyboardButton(SCENARIOS["case_1"]["title"], callback_data="case_1")
-    btn2 = types.InlineKeyboardButton(SCENARIOS["case_2"]["title"], callback_data="case_2")
-    btn3 = types.InlineKeyboardButton(SCENARIOS["case_3"]["title"], callback_data="case_3")
-    markup.add(btn1, btn2, btn3)
-    
-    bot.send_message(
-        message.chat.id, 
-        "Привет, Управляющий! 🦅 Готов проверить свои навыки решения конфликтов?\n\nВыбери сценарий:", 
-        reply_markup=markup
-    )
-
-@bot.callback_query_handler(func=lambda call: call.data in SCENARIOS)
-def start_scenario(call):
-    chat_id = call.message.chat.id
-    scenario_id = call.data
-    scenario = SCENARIOS[scenario_id]
-    
-    # Инициализация сессии
-    user_sessions[chat_id] = {
-        "status": "in_progress",
-        "messages": [
-            {"role": "system", "content": scenario["system_prompt"]}
-        ]
-    }
-    
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(types.KeyboardButton("🛑 Завершить диалог и получить оценку"))
-    
-    bot.send_message(
-        chat_id, 
-        f"*{scenario['title']}*\n_{scenario['description']}_\n\nДиалог начат. Напиши свое первое сообщение сотруднику:", 
-        parse_mode="Markdown",
-        reply_markup=markup
-    )
-
-@bot.message_handler(func=lambda message: message.text == "🛑 Завершить диалог и получить оценку")
-def end_scenario_and_evaluate(message):
-    chat_id = message.chat.id
-    
-    if chat_id not in user_sessions or user_sessions[chat_id]["status"] != "in_progress":
-        bot.send_message(chat_id, "Нет активного диалога. Нажми /start", reply_markup=types.ReplyKeyboardRemove())
-        return
-
-    bot.send_message(chat_id, "⏳ Анализирую твои действия как Управляющего...", reply_markup=types.ReplyKeyboardRemove())
-    
-    # Меняем системный промпт на Асессора, передавая всю историю
-    history = user_sessions[chat_id]["messages"]
-    evaluation_messages = [{"role": "system", "content": ASSESSOR_PROMPT}] + history
-    
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini", 
-            messages=evaluation_messages,
-            temperature=0.7
-        )
-        feedback = response.choices[0].message.content
-        bot.send_message(chat_id, f"📊 **Результат разбора:**\n\n{feedback}", parse_mode="Markdown")
+    for btn in node.get("buttons", []):
+        markup.add(types.InlineKeyboardButton(btn["text"], callback_data=btn["callback"]))
         
-        # Очищаем сессию
-        user_sessions[chat_id]["status"] = "finished"
-        bot.send_message(chat_id, "Чтобы начать новый кейс, жми /start")
-        
-    except Exception as e:
-        bot.send_message(chat_id, f"Произошла ошибка при обращении к ИИ: {e}")
+    bot.send_message(chat_id, text, parse_mode="Markdown", reply_markup=markup)
 
-@bot.message_handler(func=lambda message: True)
-def handle_conversation(message):
-    chat_id = message.chat.id
-    
-    if chat_id not in user_sessions or user_sessions[chat_id]["status"] != "in_progress":
-        bot.send_message(chat_id, "Пожалуйста, выбери кейс через команду /start")
-        return
 
-    # Добавляем реплику Управляющего в историю
-    user_sessions[chat_id]["messages"].append({"role": "user", "content": message.text})
-    
-    bot.send_chat_action(chat_id, 'typing')
-    
-    try:
-        # Запрашиваем ответ у нейросети (сотрудника)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini", 
-            messages=user_sessions[chat_id]["messages"],
-            temperature=0.8,
-            max_tokens=300
-        )
-        
-        bot_reply = response.choices[0].message.content
-        
-        # Сохраняем ответ бота в историю
-        user_sessions[chat_id]["messages"].append({"role": "assistant", "content": bot_reply})
-        
-        bot.send_message(chat_id, bot_reply)
-        
-    except Exception as e:
-        bot.send_message(chat_id, f"Сотрудник ушел в себя (ошибка API): {e}")
-
-# Запуск бота
-# === МИКРО-СЕРВЕР ДЛЯ ХОСТИНГА ===
+# === МИКРО-СЕРВЕР ДЛЯ ХОСТИНГА НА RENDER ===
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Тренажер Додо Пиццы работает!"
+    return "Интерактивный тренажер Додо работает!"
 
 def run_server():
     port = int(os.environ.get("PORT", 8080))
@@ -173,5 +116,5 @@ if __name__ == "__main__":
     server_thread = Thread(target=run_server)
     server_thread.start()
     
-    print("Бот-тренажер для Управляющих запущен...")
+    print("Кнопочный бот-тренажер запущен...")
     bot.polling(none_stop=True)
