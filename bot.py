@@ -15,8 +15,8 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 # === БАЗА СЦЕНАРИЕВ С ФОТО И HTML-РАЗМЕТКОЙ ===
 SCENARIOS = {
     "menu": {
-        "text": "Привет, Управляющий! 🦅\nВыбери ситуацию для тренировки:",
-        "photo": "https://drive.google.com/file/d/1YC0O2inG1TMIadAw1aLWyd2-8Z89YQ5s/view?usp=sharing"
+        "text": "Привет, Управляющий! 🦅\nВыбери ситуацию для отработки:",
+        "photo": "https://drive.google.com/file/d/1YC0O2inG1TMIadAw1aLWyd2-8Z89YQ5s/view?usp=drive_link", 
         "buttons": [
             {"text": "🍕 Кейс 1: Бунт из-за ревизий", "callback": "c1_start"},
             {"text": "🧹 Кейс 2: Грязный бакаут", "callback": "c2_start"},
@@ -28,7 +28,7 @@ SCENARIOS = {
     # -------- КЕЙС 1: БУНТ ИЗ-ЗА РЕВИЗИЙ --------
     "c1_start": {
         "text": "<b>Кейс 1: Ревизии</b>\nМенеджеры недовольны ежедневными ревизиями: «Либо я считаю, либо слежу за линией! Мы не успеваем!»\n\n<b>Твое первое действие:</b>",
-        "photo": "https://drive.google.com/file/d/1JqInvSoqkF6ptHFo0O12UfVYf9HTzxEX/view?usp=sharing",
+        "photo": "https://drive.google.com/file/d/1JqInvSoqkF6ptHFo0O12UfVYf9HTzxEX/view?usp=drive_link",
         "buttons": [
             {"text": "Назначить встречу и разобрать хронометраж", "callback": "c1_step2_good"},
             {"text": "Сказать, что это приказ и обсуждению не подлежит", "callback": "c1_step2_bad"}
