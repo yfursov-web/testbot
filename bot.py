@@ -155,11 +155,17 @@ def send_node(chat_id, node_id):
     for btn in node.get("buttons", []):
         markup.add(types.InlineKeyboardButton(btn["text"], callback_data=btn["callback"]))
         
-    # Если в узле есть картинка, отправляем фото с подписью
+    # Бронебойная логика отправки сообщений
     if "photo" in node:
-        bot.send_photo(chat_id, node["photo"], caption=text, parse_mode="HTML", reply_markup=markup)
+        try:
+            # Пытаемся отправить с картинкой
+            bot.send_photo(chat_id, node["photo"], caption=text, parse_mode="HTML", reply_markup=markup)
+        except Exception as e:
+            print(f"Ошибка загрузки фото: {e}")
+            # Если Телеграм забраковал ссылку на фото, отправляем просто текст
+            bot.send_message(chat_id, text, parse_mode="HTML", reply_markup=markup)
     else:
-        # Если картинки нет, отправляем просто текст
+        # Если картинки в сценарии нет, отправляем просто текст
         bot.send_message(chat_id, text, parse_mode="HTML", reply_markup=markup)
 
 # === МИКРО-СЕРВЕР ДЛЯ ХОСТИНГА НА RENDER ===
@@ -167,7 +173,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Интерактивный тренажер Додо работает чисто и с картинками!"
+    return "Интерактивный тренажер Додо работает!"
 
 def run_server():
     port = int(os.environ.get("PORT", 8080))
@@ -177,6 +183,9 @@ if __name__ == "__main__":
     print("Запуск веб-сервера...")
     server_thread = Thread(target=run_server)
     server_thread.start()
+    
+    print("Сбрасываем старые вебхуки...")
+    bot.remove_webhook()
     
     print("Кнопочный бот-тренажер запущен...")
     bot.polling(none_stop=True)
